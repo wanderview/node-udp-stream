@@ -25,9 +25,85 @@
 
 var UdpStream = require('../stream');
 
-module.exports.nop = function(test) {
+var UdpHeader = require('udp-header');
+
+module.exports.writeBuffer = function(test) {
   test.expect(1);
+
+  var udp = new UdpHeader({
+    srcPort: 123,
+    dstPort: 456,
+    dataLength: 50
+  });
+
   var ustream = new UdpStream();
-  test.ok(ustream instanceof UdpStream);
-  test.done();
+  ustream.on('readable', function() {
+    var msg = ustream.read();
+
+    test.deepEqual(udp, msg.udp);
+  });
+
+  ustream.on('end', function() {
+    test.done();
+  });
+
+  ustream.read(0);
+
+  ustream.write(udp.toBuffer());
+  ustream.end();
+};
+
+module.exports.writeObject = function(test) {
+  test.expect(1);
+
+  var udp = new UdpHeader({
+    srcPort: 123,
+    dstPort: 456,
+    dataLength: 50
+  });
+
+  var ustream = new UdpStream();
+  ustream.on('readable', function() {
+    var msg = ustream.read();
+
+    test.deepEqual(udp, msg.udp);
+  });
+
+  ustream.on('end', function() {
+    test.done();
+  });
+
+  ustream.read(0);
+
+  ustream.write({ data: udp.toBuffer(), ip: { protocol: 'udp' } });
+  ustream.end();
+};
+
+module.exports.ignoreObject = function(test) {
+  test.expect(1);
+
+  var udp = new UdpHeader({
+    srcPort: 123,
+    dstPort: 456,
+    dataLength: 50
+  });
+
+  var msg = {
+    data: udp.toBuffer(),
+    ip: { protocol: 'tcp' }
+  };
+
+  var ustream = new UdpStream();
+  ustream.on('ignored', function(ignored) {
+    test.deepEqual(msg, ignored);
+  });
+
+  ustream.on('end', function() {
+    test.done();
+  });
+
+  ustream.read(0);
+
+  ustream.write(msg);
+  ustream.end();
 };
