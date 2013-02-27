@@ -1,0 +1,31 @@
+{
+  "name": "udp-stream",
+  "description": "UDP header parsing object stream",
+  "keywords": [
+    "udp",
+    "datagram",
+    "header",
+    "parser",
+    "stream",
+    "streams2",
+    "binary"
+  ],
+  "version": "0.0.0",
+  "author": "Ben Kelly <ben@wanderview.com>",
+  "license": "BSD",
+  "dependencies": {
+    "readable-stream": "~0.3.0",
+    "udp-header": "~0.1.0"
+  },
+  "devDependencies": {
+    "nodeunit": "~0.7.4"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:wanderview/node-udp-stream.git"
+  },
+  "scripts": {
+    "test": "nodeunit test"
+  },
+  "main": "stream.js"
+}
