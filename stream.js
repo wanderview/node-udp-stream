@@ -29,6 +29,7 @@ var Transform = require('stream').Transform;
 if (!Transform) {
   Transform = require('readable-stream/transform');
 }
+var UdpHeader = require('udp-header');
 var util = require('util');
 
 util.inherits(UdpStream, Transform);
@@ -46,5 +47,28 @@ function UdpStream(opts) {
 }
 
 UdpStream.prototype._transform = function(origMsg, output, callback) {
-  // TODO: implement _transform
+  var msg = origMsg;
+  if (msg instanceof Buffer) {
+    msg = { data: msg, offset: 0 };
+  }
+  msg.offset = ~~msg.offset;
+
+  var type = (msg.ip && msg.ip.protocol) ? msg.ip.protocol : 'udp';
+  if (type !== 'udp') {
+    this.emit('ignored', origMsg);
+    callback();
+    return;
+  }
+
+  try {
+
+    msg.udp = new UdpHeader(msg.data, msg.offset);
+    msg.offset += msg.udp.length;
+    output(msg);
+
+  } catch (error) {
+    this.emit('ignored', origMsg);
+  }
+
+  callback();
 };
