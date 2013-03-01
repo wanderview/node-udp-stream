@@ -25,14 +25,11 @@
 
 module.exports = UdpStream;
 
-var Transform = require('stream').Transform;
-if (!Transform) {
-  Transform = require('readable-stream/transform');
-}
+var ObjectTransform = require('object-transform');
 var UdpHeader = require('udp-header');
 var util = require('util');
 
-util.inherits(UdpStream, Transform);
+util.inherits(UdpStream, ObjectTransform);
 
 function UdpStream(opts) {
   var self = (this instanceof UdpStream)
@@ -41,34 +38,44 @@ function UdpStream(opts) {
 
   opts = opts || {};
 
-  Transform.call(self, opts);
+  opts.meta = 'udp';
+
+  ObjectTransform.call(self, opts);
+
+  if (self.udp && typeof self.udp.toBuffer !== 'function') {
+    throw new Error('UdpStream option udp must be null or provide a ' +
+                    'toBuffer() function');
+  }
+
+  self._payload = opts.payload || 'suffix';
+
+  if (self._payload && typeof self._payload !== 'string') {
+    throw new Error('Optional payload value must be null or string ' +
+                    'specifying message property containing the UDP payload.');
+  }
 
   return self;
 }
 
-UdpStream.prototype._transform = function(origMsg, output, callback) {
-  var msg = origMsg;
-  if (msg instanceof Buffer) {
-    msg = { data: msg, offset: 0 };
-  }
-  msg.offset = ~~msg.offset;
-
+UdpStream.prototype._reduce = function(msg, output, callback) {
   var type = (msg.ip && msg.ip.protocol) ? msg.ip.protocol : 'udp';
   if (type !== 'udp') {
-    this.emit('ignored', origMsg);
+    var error = new Error('Invalid protocol [' + type + ']; must be udp');
+    this.emit('ignored', error, origMsg);
     callback();
     return;
   }
 
-  try {
+  msg.udp = new UdpHeader(msg.data, msg.offset);
+  msg.offset += msg.udp.length;
+  return msg;
+};
 
-    msg.udp = new UdpHeader(msg.data, msg.offset);
-    msg.offset += msg.udp.length;
-    output(msg);
-
-  } catch (error) {
-    this.emit('ignored', origMsg);
+UdpStream.prototype._expand = function(udp, msg, output, callback) {
+  if (msg.ip && Buffer.isBuffer(msg[this._payload])) {
+    udp.setChecksum(msg.ip, msg[this._payload]);
   }
-
-  callback();
+  udp.toBuffer(msg.data, msg.offset);
+  msg.offset += udp.length;
+  return msg;
 };

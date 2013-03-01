@@ -94,7 +94,7 @@ module.exports.ignoreObject = function(test) {
   };
 
   var ustream = new UdpStream();
-  ustream.on('ignored', function(ignored) {
+  ustream.on('ignored', function(error, ignored) {
     test.deepEqual(msg, ignored);
   });
 
